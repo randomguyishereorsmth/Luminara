@@ -49,6 +49,9 @@ Tab.__index = Tab
 local Section = {}
 Section.__index = Section
 
+local WorkspaceTab = {}
+WorkspaceTab.__index = WorkspaceTab
+
 local function mergeTheme(theme)
 	local merged = {}
 	for key, value in pairs(DEFAULT_THEME) do
@@ -72,7 +75,7 @@ local function make(className, props, children)
 end
 
 local function corner(radius)
-	return make("UICorner", { CornerRadius = UDim.new(0, radius or 8) })
+	return make("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
 end
 
 local function stroke(color, thickness, transparency)
@@ -289,11 +292,12 @@ local function createControlShell(section, config, height)
 		corner(8),
 		stroke(theme.Stroke, 1, 0.62),
 	})
+	section.Window:TrackTheme(frame, "BackgroundColor3", "Control")
 
 	frame:SetAttribute("SearchText", string.lower((config.Name or "") .. " " .. (config.Title or "") .. " " .. description))
 	table.insert(section.Tab.Searchables, frame)
 
-	createText(frame, {
+	local titleLabel = createText(frame, {
 		Text = config.Name or config.Title or "Control",
 		Color = theme.Text,
 		Font = Enum.Font.GothamBold,
@@ -301,9 +305,10 @@ local function createControlShell(section, config, height)
 		Position = UDim2.fromOffset(13, description ~= "" and 7 or 0),
 		BoxSize = UDim2.new(1, -170, description ~= "" and 0 or 1, description ~= "" and 18 or 0),
 	})
+	section.Window:TrackTheme(titleLabel, "TextColor3", "Text")
 
 	if description ~= "" then
-		createText(frame, {
+		local descriptionLabel = createText(frame, {
 			Text = description,
 			Color = theme.Subtext,
 			Font = Enum.Font.GothamMedium,
@@ -313,6 +318,7 @@ local function createControlShell(section, config, height)
 			BoxSize = UDim2.new(1, -170, 0, 22),
 			Y = Enum.TextYAlignment.Top,
 		})
+		section.Window:TrackTheme(descriptionLabel, "TextColor3", "Subtext")
 	end
 
 	return frame
@@ -366,11 +372,51 @@ function Luminara:CreateWindow(config)
 		Parent = root,
 	})
 
+	local chrome = make("Frame", {
+		Name = "ChromeTabs",
+		BackgroundColor3 = theme.Background,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 42),
+		Parent = root,
+	}, {
+		stroke(theme.Stroke, 1, 0.72),
+	})
+
+	local workspaceHolder = make("Frame", {
+		Name = "WorkspaceTabs",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(12, 8),
+		Size = UDim2.new(1, -66, 0, 30),
+		Parent = chrome,
+	})
+
+	local workspaceLayout = make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 7),
+		Parent = workspaceHolder,
+	})
+
+	local newWorkspace = make("TextButton", {
+		Name = "NewWorkspace",
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = theme.Control,
+		BorderSizePixel = 0,
+		Font = Enum.Font.GothamBlack,
+		Text = "+",
+		TextColor3 = theme.Text,
+		TextSize = 18,
+		Position = UDim2.new(1, -12, 0, 8),
+		Size = UDim2.fromOffset(32, 30),
+		Parent = chrome,
+	}, { corner(9), stroke(theme.Stroke, 1, 0.65) })
+
 	local topbar = make("Frame", {
 		Name = "Topbar",
 		BackgroundColor3 = theme.Topbar,
 		BorderSizePixel = 0,
-		Size = UDim2.new(1, 0, 0, 58),
+		Position = UDim2.fromOffset(0, 42),
+		Size = UDim2.new(1, 0, 0, 60),
 		Parent = root,
 	}, {
 		stroke(theme.Stroke, 1, 0.58),
@@ -403,10 +449,24 @@ function Luminara:CreateWindow(config)
 		Text = "-",
 		TextColor3 = theme.Text,
 		TextSize = 18,
-		Position = UDim2.new(1, -96, 0, 14),
+		Position = UDim2.new(1, -138, 0, 15),
 		Size = UDim2.fromOffset(34, 30),
 		Parent = topbar,
-	}, { corner(6) })
+	}, { corner(9) })
+
+	local settings = make("TextButton", {
+		Name = "Settings",
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = theme.Control,
+		BorderSizePixel = 0,
+		Font = Enum.Font.GothamBlack,
+		Text = "...",
+		TextColor3 = theme.Text,
+		TextSize = 14,
+		Position = UDim2.new(1, -98, 0, 15),
+		Size = UDim2.fromOffset(34, 30),
+		Parent = topbar,
+	}, { corner(9) })
 
 	local maximize = make("TextButton", {
 		Name = "Maximize",
@@ -417,10 +477,10 @@ function Luminara:CreateWindow(config)
 		Text = "[]",
 		TextColor3 = theme.Text,
 		TextSize = 14,
-		Position = UDim2.new(1, -56, 0, 14),
+		Position = UDim2.new(1, -58, 0, 15),
 		Size = UDim2.fromOffset(34, 30),
 		Parent = topbar,
-	}, { corner(6) })
+	}, { corner(9) })
 
 	local close = make("TextButton", {
 		Name = "Close",
@@ -431,24 +491,46 @@ function Luminara:CreateWindow(config)
 		Text = "x",
 		TextColor3 = theme.Text,
 		TextSize = 15,
-		Position = UDim2.new(1, -16, 0, 14),
+		Position = UDim2.new(1, -18, 0, 15),
 		Size = UDim2.fromOffset(34, 30),
 		Parent = topbar,
-	}, { corner(6) })
+	}, { corner(9) })
 
 	buttonMotion(minimize, theme.Control, theme.ControlHover)
+	buttonMotion(settings, theme.Control, theme.ControlHover)
 	buttonMotion(maximize, theme.Control, theme.ControlHover)
 	buttonMotion(close, theme.Control, theme.Danger)
+
+	local settingsMenu = make("Frame", {
+		Name = "SettingsMenu",
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = theme.Panel,
+		BorderSizePixel = 0,
+		Position = UDim2.new(1, -58, 0, 49),
+		Size = UDim2.fromOffset(190, 0),
+		Visible = false,
+		ZIndex = 10,
+		Parent = topbar,
+	}, {
+		corner(10),
+		stroke(theme.Stroke, 1, 0.36),
+		pad(8),
+	})
+	make("UIListLayout", {
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 6),
+		Parent = settingsMenu,
+	})
 
 	local sidebar = make("Frame", {
 		Name = "Tabs",
 		BackgroundColor3 = theme.Sidebar,
 		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(12, 70),
-		Size = UDim2.new(0, 188, 1, -82),
+		Position = UDim2.fromOffset(14, 116),
+		Size = UDim2.new(0, 194, 1, -130),
 		Parent = root,
 	}, {
-		corner(8),
+		corner(12),
 		stroke(theme.Stroke, 1, 0.55),
 		pad(10),
 	})
@@ -464,11 +546,11 @@ function Luminara:CreateWindow(config)
 		BackgroundColor3 = theme.Panel,
 		BorderSizePixel = 0,
 		ClipsDescendants = true,
-		Position = UDim2.fromOffset(212, 70),
-		Size = UDim2.new(1, -224, 1, -82),
+		Position = UDim2.fromOffset(222, 116),
+		Size = UDim2.new(1, -236, 1, -130),
 		Parent = root,
 	}, {
-		corner(8),
+		corner(12),
 		stroke(theme.Stroke, 1, 0.55),
 	})
 	addGradient(content, theme)
@@ -507,14 +589,24 @@ function Luminara:CreateWindow(config)
 		ScreenGui = screenGui,
 		Root = root,
 		Shadow = shadow,
+		Chrome = chrome,
+		WorkspaceHolder = workspaceHolder,
+		WorkspaceLayout = workspaceLayout,
+		NewWorkspaceButton = newWorkspace,
 		Topbar = topbar,
+		SettingsButton = settings,
+		SettingsMenu = settingsMenu,
 		Sidebar = sidebar,
 		Content = content,
 		Notifications = notifications,
 		Tabs = {},
 		SelectedTab = nil,
+		Workspaces = {},
+		SelectedWorkspace = nil,
 		Options = {},
 		Connections = {},
+		ThemeBindings = {},
+		HotkeyEnabled = true,
 		Minimized = false,
 		Maximized = false,
 		NormalSize = size,
@@ -524,12 +616,30 @@ function Luminara:CreateWindow(config)
 	for _, connection in ipairs(attachDrag(topbar, root)) do
 		table.insert(window.Connections, connection)
 	end
+	for _, connection in ipairs(attachDrag(chrome, root)) do
+		table.insert(window.Connections, connection)
+	end
 	for _, connection in ipairs(attachResize(resizeGrip, root, minSize)) do
 		table.insert(window.Connections, connection)
 	end
 
+	window:TrackTheme(root, "BackgroundColor3", "Background")
+	window:TrackTheme(chrome, "BackgroundColor3", "Background")
+	window:TrackTheme(topbar, "BackgroundColor3", "Topbar")
+	window:TrackTheme(sidebar, "BackgroundColor3", "Sidebar")
+	window:TrackTheme(content, "BackgroundColor3", "Panel")
+	window:TrackTheme(settingsMenu, "BackgroundColor3", "Panel")
+	window:TrackTheme(newWorkspace, "BackgroundColor3", "Control")
+	window:TrackTheme(minimize, "BackgroundColor3", "Control")
+	window:TrackTheme(settings, "BackgroundColor3", "Control")
+	window:TrackTheme(maximize, "BackgroundColor3", "Control")
+
 	minimize.MouseButton1Click:Connect(function()
 		window:SetMinimized(not window.Minimized)
+	end)
+
+	settings.MouseButton1Click:Connect(function()
+		window:ToggleSettings()
 	end)
 
 	maximize.MouseButton1Click:Connect(function()
@@ -540,6 +650,13 @@ function Luminara:CreateWindow(config)
 		window:Destroy()
 	end)
 
+	newWorkspace.MouseButton1Click:Connect(function()
+		local created = window:CreateWorkspace({
+			Name = "Window " .. tostring(#window.Workspaces + 1),
+		})
+		window:SelectWorkspace(created)
+	end)
+
 	if config.Watermark then
 		window:CreateWatermark(typeof(config.Watermark) == "table" and config.Watermark or { Text = tostring(config.Watermark) })
 	end
@@ -547,17 +664,162 @@ function Luminara:CreateWindow(config)
 	if config.Keybind ~= false then
 		local key = config.Keybind or Enum.KeyCode.RightControl
 		table.insert(window.Connections, UserInputService.InputBegan:Connect(function(input, processed)
-			if not processed and input.KeyCode == key then
+			if window.HotkeyEnabled and not processed and input.KeyCode == key then
 				window:Toggle()
 			end
 		end))
 	end
+
+	window:BuildSettingsMenu()
+	window:CreateWorkspace({ Name = config.WorkspaceName or "Window 1" })
 
 	root.Size = UDim2.fromOffset(0, size.Y.Offset)
 	tween(root, 0.34, { Size = size }, Enum.EasingStyle.Back)
 	table.insert(Luminara.Windows, window)
 
 	return window
+end
+
+function Window:TrackTheme(object, property, key)
+	if object and property and key then
+		table.insert(self.ThemeBindings, { Object = object, Property = property, Key = key })
+		object[property] = self.Theme[key]
+	end
+	return object
+end
+
+function Window:SetTheme(theme)
+	for key, value in pairs(theme or {}) do
+		self.Theme[key] = value
+	end
+	for _, binding in ipairs(self.ThemeBindings) do
+		if binding.Object and binding.Object.Parent and self.Theme[binding.Key] then
+			binding.Object[binding.Property] = self.Theme[binding.Key]
+		end
+	end
+	if self.SelectedWorkspace then
+		for _, item in ipairs(self.Workspaces) do
+			item.Button.BackgroundColor3 = item == self.SelectedWorkspace and self.Theme.AccentDark or self.Theme.Control
+			item.Button.TextColor3 = item == self.SelectedWorkspace and self.Theme.Text or self.Theme.Subtext
+		end
+	end
+	if self.SelectedTab then
+		for _, item in ipairs(self.Tabs) do
+			item.Button.BackgroundColor3 = item == self.SelectedTab and self.Theme.AccentDark or self.Theme.Control
+		end
+	end
+end
+
+function Window:_makeSettingsButton(text, callback)
+	local button = make("TextButton", {
+		BackgroundColor3 = self.Theme.Control,
+		BorderSizePixel = 0,
+		Font = Enum.Font.GothamBold,
+		Text = text,
+		TextColor3 = self.Theme.Text,
+		TextSize = 12,
+		Size = UDim2.new(1, 0, 0, 32),
+		ZIndex = 11,
+		Parent = self.SettingsMenu,
+	}, { corner(8) })
+	self:TrackTheme(button, "BackgroundColor3", "Control")
+	buttonMotion(button, self.Theme.Control, self.Theme.ControlHover)
+	button.MouseButton1Click:Connect(function()
+		self:ToggleSettings(false)
+		safeCall(callback)
+	end)
+	return button
+end
+
+function Window:BuildSettingsMenu()
+	self:_makeSettingsButton("Toggle hotkey: on", function()
+		self.HotkeyEnabled = not self.HotkeyEnabled
+		self:Notify({
+			Title = "Settings",
+			Content = "GUI hotkey is now " .. (self.HotkeyEnabled and "enabled." or "disabled."),
+			Duration = 3,
+		})
+	end)
+	self:_makeSettingsButton("Save current window", function()
+		if self.SelectedWorkspace then
+			self.SelectedWorkspace.Config = self:GetConfig()
+			self:SaveConfig(self.ConfigName .. "_" .. self.SelectedWorkspace.Name:gsub("%W", "_"))
+		end
+		self:Notify({ Title = "Settings", Content = "Current window config saved.", Duration = 3 })
+	end)
+	self:_makeSettingsButton("Load current window", function()
+		if self.SelectedWorkspace then
+			local loaded = self:LoadConfig(self.ConfigName .. "_" .. self.SelectedWorkspace.Name:gsub("%W", "_"), true, true)
+			if loaded then
+				self.SelectedWorkspace.Config = loaded
+			end
+		end
+		self:Notify({ Title = "Settings", Content = "Current window config loaded.", Duration = 3 })
+	end)
+	self:_makeSettingsButton("Destroy GUI", function()
+		self:Destroy()
+	end)
+end
+
+function Window:ToggleSettings(force)
+	local visible = force
+	if visible == nil then
+		visible = not self.SettingsMenu.Visible
+	end
+	self.SettingsMenu.Visible = visible
+	tween(self.SettingsMenu, 0.16, { Size = UDim2.fromOffset(190, visible and 146 or 0) })
+end
+
+function Window:CreateWorkspace(config)
+	config = config or {}
+	local name = config.Name or ("Window " .. tostring(#self.Workspaces + 1))
+	local button = make("TextButton", {
+		Name = name:gsub("%W", "") .. "Workspace",
+		BackgroundColor3 = self.Theme.Control,
+		BorderSizePixel = 0,
+		Font = Enum.Font.GothamBold,
+		Text = name,
+		TextColor3 = self.Theme.Text,
+		TextSize = 12,
+		Size = UDim2.fromOffset(138, 30),
+		Parent = self.WorkspaceHolder,
+	}, {
+		corner(10),
+		stroke(self.Theme.Stroke, 1, 0.55),
+	})
+	self:TrackTheme(button, "BackgroundColor3", "Control")
+
+	local workspace = setmetatable({
+		Name = name,
+		Button = button,
+		Config = config.Config or {},
+	}, WorkspaceTab)
+	button.MouseButton1Click:Connect(function()
+		self:SelectWorkspace(workspace)
+	end)
+	table.insert(self.Workspaces, workspace)
+	if not self.SelectedWorkspace then
+		self:SelectWorkspace(workspace)
+	end
+	return workspace
+end
+
+function Window:SelectWorkspace(workspace)
+	if self.SelectedWorkspace == workspace then
+		return
+	end
+	if self.SelectedWorkspace then
+		self.SelectedWorkspace.Config = self:GetConfig()
+	end
+	self.SelectedWorkspace = workspace
+	for _, item in ipairs(self.Workspaces) do
+		local active = item == workspace
+		tween(item.Button, 0.16, {
+			BackgroundColor3 = active and self.Theme.AccentDark or self.Theme.Control,
+			TextColor3 = active and self.Theme.Text or self.Theme.Subtext,
+		})
+	end
+	self:LoadConfigData(workspace.Config or {}, true, true)
 end
 
 function Window:RegisterOption(flag, option)
@@ -635,6 +897,7 @@ function Window:CreateTab(config)
 		corner(8),
 		stroke(theme.Stroke, 1, 0.7),
 	})
+	self:TrackTheme(button, "BackgroundColor3", "Control")
 
 	createIcon(button, config.Icon, 26, UDim2.fromOffset(12, 19))
 	createText(button, {
@@ -920,8 +1183,16 @@ function Window:GetConfig()
 	return data
 end
 
-function Window:LoadConfigData(data)
-	for flag, item in pairs(data or {}) do
+function Window:LoadConfigData(data, fireCallbacks, resetMissing)
+	data = data or {}
+	if resetMissing then
+		for flag, option in pairs(self.Options) do
+			if data[flag] == nil and typeof(option.Set) == "function" and option.DefaultValue ~= nil then
+				option:Set(option.DefaultValue, not fireCallbacks)
+			end
+		end
+	end
+	for flag, item in pairs(data) do
 		local option = self.Options[flag]
 		if option and typeof(option.Set) == "function" then
 			local value = item.Value
@@ -930,7 +1201,7 @@ function Window:LoadConfigData(data)
 			elseif item.Type == "EnumItem" and Enum.KeyCode[item.Value] then
 				value = Enum.KeyCode[item.Value]
 			end
-			option:Set(value, true)
+			option:Set(value, not fireCallbacks)
 		end
 	end
 end
@@ -945,13 +1216,13 @@ function Window:SaveConfig(name)
 	return data
 end
 
-function Window:LoadConfig(name)
+function Window:LoadConfig(name, fireCallbacks, resetMissing)
 	local fileName = name or self.ConfigName
 	if isFileApiAvailable() then
 		local path = Luminara.ConfigFolder .. "/" .. fileName .. ".json"
 		if isfile(path) then
 			local decoded = HttpService:JSONDecode(readfile(path))
-			self:LoadConfigData(decoded)
+			self:LoadConfigData(decoded, fireCallbacks, resetMissing)
 			return decoded
 		end
 	end
@@ -1138,7 +1409,9 @@ function Section:CreateButton(config)
 		Position = UDim2.new(1, -10, 0.5, 0),
 		Size = UDim2.fromOffset(110, 30),
 		Parent = frame,
-	}, { corner(7) })
+	}, { corner(10) })
+	self.Window:TrackTheme(button, "BackgroundColor3", "AccentDark")
+	self.Window:TrackTheme(button, "TextColor3", "Text")
 	buttonMotion(button, theme.AccentDark, theme.Accent)
 	button.MouseButton1Click:Connect(function()
 		safeCall(config.Callback)
@@ -1172,11 +1445,13 @@ function Section:CreateToggle(config)
 		Size = UDim2.fromOffset(18, 18),
 		Parent = track,
 	}, { corner(20) })
+	self.Window:TrackTheme(knob, "BackgroundColor3", "Text")
 
 	local api = {}
+	api.DefaultValue = state
 	function api:Set(value, silent)
 		state = value == true
-		tween(track, 0.16, { BackgroundColor3 = state and theme.Accent or theme.PanelAlt })
+		tween(track, 0.16, { BackgroundColor3 = state and self.Window.Theme.Accent or self.Window.Theme.PanelAlt })
 		tween(knob, 0.16, { Position = state and UDim2.fromOffset(25, 3) or UDim2.fromOffset(3, 3) })
 		if not silent then
 			safeCall(config.Callback, state)
@@ -1224,8 +1499,11 @@ function Section:CreateSlider(config)
 		Size = UDim2.fromScale((value - min) / (max - min), 1),
 		Parent = bar,
 	}, { corner(10) })
+	self.Window:TrackTheme(label, "TextColor3", "Accent")
+	self.Window:TrackTheme(fill, "BackgroundColor3", "Accent")
 
 	local api = {}
+	api.DefaultValue = value
 	function api:Set(newValue, silent)
 		local rounded = math.floor((newValue / increment) + 0.5) * increment
 		value = math.clamp(rounded, min, max)
@@ -1290,6 +1568,7 @@ function Section:CreateDropdown(config)
 	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6), Parent = list })
 
 	local api = {}
+	api.DefaultValue = selected
 	local function rebuild()
 		for _, child in ipairs(list:GetChildren()) do
 			if child:IsA("GuiButton") then child:Destroy() end
@@ -1354,6 +1633,7 @@ function Section:CreateMultiDropdown(config)
 			safeCall(config.Callback, values)
 		end,
 	})
+	dropdown.DefaultValue = config.Default or config.CurrentOptions or {}
 	function dropdown:Set(values, silent)
 		selected = {}
 		for _, value in ipairs(values or {}) do
@@ -1391,6 +1671,7 @@ function Section:CreateTextbox(config)
 		Parent = frame,
 	}, { corner(7), pad(0, 8, 0, 8) })
 	local api = {}
+	api.DefaultValue = box.Text
 	function api:Set(value, silent)
 		box.Text = tostring(value or "")
 		if not silent then safeCall(config.Callback, box.Text) end
@@ -1423,6 +1704,7 @@ function Section:CreateKeybind(config)
 		Parent = frame,
 	}, { corner(7) })
 	local api = {}
+	api.DefaultValue = current
 	function api:Set(key, silent)
 		current = key
 		button.Text = prettyKey(current)
@@ -1451,17 +1733,18 @@ function Section:CreateColorPicker(config)
 	config = config or {}
 	local theme = self.Window.Theme
 	local value = config.Default or config.CurrentColor or theme.Accent
-	local frame = createControlShell(self, config, 76)
+	local frame = createControlShell(self, config, 88)
 	local preview = make("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
 		BackgroundColor3 = value,
 		BorderSizePixel = 0,
 		Position = UDim2.new(1, -12, 0, 12),
-		Size = UDim2.fromOffset(42, 28),
+		Size = UDim2.fromOffset(46, 32),
 		Parent = frame,
-	}, { corner(7), stroke(theme.Stroke, 1, 0.5) })
+	}, { corner(10), stroke(theme.Stroke, 1, 0.5) })
 	local sliders = {}
 	local api = {}
+	local draggingChannel = nil
 	local function channelOf(color, channel)
 		if channel == "R" then return color.R end
 		if channel == "G" then return color.G end
@@ -1470,16 +1753,34 @@ function Section:CreateColorPicker(config)
 	local function update(silent)
 		value = Color3.fromRGB(sliders.R:Get(), sliders.G:Get(), sliders.B:Get())
 		preview.BackgroundColor3 = value
+		if config.ThemeKey then
+			local updateTheme = {}
+			updateTheme[config.ThemeKey] = value
+			if config.ThemeKey == "Accent" and config.UpdateAccentDark ~= false then
+				updateTheme.AccentDark = value:Lerp(Color3.fromRGB(0, 0, 0), 0.38)
+			end
+			self.Window:SetTheme(updateTheme)
+		end
 		if not silent then safeCall(config.Callback, value) end
 	end
 	for index, channel in ipairs({ "R", "G", "B" }) do
 		local bar = make("Frame", {
 			BackgroundColor3 = theme.PanelAlt,
 			BorderSizePixel = 0,
-			Position = UDim2.fromOffset(13 + ((index - 1) * 90), 52),
-			Size = UDim2.fromOffset(78, 7),
+			Position = UDim2.fromOffset(13 + ((index - 1) * 94), 62),
+			Size = UDim2.fromOffset(82, 8),
 			Parent = frame,
 		}, { corner(10) })
+		make("TextLabel", {
+			BackgroundTransparency = 1,
+			Font = Enum.Font.GothamBlack,
+			Text = channel,
+			TextColor3 = theme.Subtext,
+			TextSize = 10,
+			Position = UDim2.fromOffset(13 + ((index - 1) * 94), 47),
+			Size = UDim2.fromOffset(82, 12),
+			Parent = frame,
+		})
 		local fill = make("Frame", {
 			BackgroundColor3 = channel == "R" and Color3.fromRGB(255, 90, 110) or channel == "G" and Color3.fromRGB(90, 230, 140) or Color3.fromRGB(90, 170, 255),
 			BorderSizePixel = 0,
@@ -1487,6 +1788,9 @@ function Section:CreateColorPicker(config)
 			Parent = bar,
 		}, { corner(10) })
 		local channelValue = math.floor(channelOf(value, channel) * 255 + 0.5)
+		local function setFromInput(input)
+			sliders[channel]:Set(((input.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X) * 255)
+		end
 		sliders[channel] = {
 			Get = function() return channelValue end,
 			Set = function(_, newValue, silent)
@@ -1497,17 +1801,29 @@ function Section:CreateColorPicker(config)
 		}
 		bar.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				sliders[channel]:Set(((input.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X) * 255)
+				draggingChannel = channel
+				setFromInput(input)
 			end
 		end)
+		table.insert(self.Window.Connections, UserInputService.InputChanged:Connect(function(input)
+			if draggingChannel == channel and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				setFromInput(input)
+			end
+		end))
 	end
+	table.insert(self.Window.Connections, UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			draggingChannel = nil
+		end
+	end))
+	api.DefaultValue = value
 	function api:Set(color, silent)
 		value = tableToColor(color, value)
 		sliders.R:Set(value.R * 255, true)
 		sliders.G:Set(value.G * 255, true)
 		sliders.B:Set(value.B * 255, true)
 		preview.BackgroundColor3 = value
-		if not silent then safeCall(config.Callback, value) end
+		update(silent)
 	end
 	function api:Get() return value end
 	self.Window:RegisterOption(config.Flag or config.Name, api)
